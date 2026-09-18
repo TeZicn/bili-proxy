@@ -46,27 +46,29 @@ module.exports = async function handler(req, res) {
   for (const k of Object.keys(req.headers || {})) {
     const lk = k.toLowerCase();
     // 过滤掉 Host/Content-Length/Connection，以及 Origin：
-    // ⚠️ 经实测，带 Origin 头的请求经 Vercel 转发后会被 B 站 403 风控拦截
-    //   （Origin=https://www.bilibili.com 但实际来自 Vercel 转发链路 → CSRF 判定）。
-    //   去掉 Origin 后（保留 Referer/UA/Sec-Fetch-*）实测返回 200 正常。
-    if (["host", "content-length", "connection", "origin"].includes(lk)) continue;
+    // ⚠️ 经实测，带 Origin 头的请求经 Vercel 转发后会被 B 站风控拦截
+    //   （Origin=https://www.bilibili.com 但实际来自 Vercel 转发链路 → CSRF/风控判定）。
+    //   同时过滤 user-agent / sec-ch-ua*：统一由下方覆盖为配套的浏览器指纹，
+    //   避免客户端（后端）只带 UA 而缺 sec-ch-ua 系列头 → B 站判定伪造 UA → 412。
+    if (["host", "content-length", "connection", "origin", "user-agent",
+         "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform"].includes(lk)) continue;
     headers[k] = req.headers[k];
   }
   // 改写关键头
   headers["Host"] = TARGET_HOST;
   headers["Referer"] = "https://www.bilibili.com/";
-  if (!headers["user-agent"]) {
-    headers["User-Agent"] =
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-      "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-  }
-  // 浏览器特征头
-  if (!headers["sec-ch-ua"]) headers["sec-ch-ua"] = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"';
-  if (!headers["sec-ch-ua-mobile"]) headers["sec-ch-ua-mobile"] = "?0";
-  if (!headers["sec-ch-ua-platform"]) headers["sec-ch-ua-platform"] = '"Windows"';
-  if (!headers["Sec-Fetch-Dest"]) headers["Sec-Fetch-Dest"] = "empty";
-  if (!headers["Sec-Fetch-Mode"]) headers["Sec-Fetch-Mode"] = "cors";
-  if (!headers["Sec-Fetch-Site"]) headers["Sec-Fetch-Site"] = "same-site";
+  // ⚠️ 始终覆盖 UA + sec-ch-ua 系列（不信任客户端传入）：
+  //   实测「只带 UA、缺 sec-ch-ua」经 Vercel 转发会被 B 站 412 风控；
+  //   「不带 UA、由本脚本补全套」返回 200。因此这里强制统一为配套指纹。
+  headers["User-Agent"] =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  headers["sec-ch-ua"] = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"';
+  headers["sec-ch-ua-mobile"] = "?0";
+  headers["sec-ch-ua-platform"] = '"Windows"';
+  headers["Sec-Fetch-Dest"] = "empty";
+  headers["Sec-Fetch-Mode"] = "cors";
+  headers["Sec-Fetch-Site"] = "same-site";
   delete headers["accept-encoding"];
 
   // Cookie 处理：透传已有；无则补 buvid3
