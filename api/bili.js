@@ -45,13 +45,16 @@ module.exports = async function handler(req, res) {
   const headers = {};
   for (const k of Object.keys(req.headers || {})) {
     const lk = k.toLowerCase();
-    if (["host", "content-length", "connection"].includes(lk)) continue;
+    // 过滤掉 Host/Content-Length/Connection，以及 Origin：
+    // ⚠️ 经实测，带 Origin 头的请求经 Vercel 转发后会被 B 站 403 风控拦截
+    //   （Origin=https://www.bilibili.com 但实际来自 Vercel 转发链路 → CSRF 判定）。
+    //   去掉 Origin 后（保留 Referer/UA/Sec-Fetch-*）实测返回 200 正常。
+    if (["host", "content-length", "connection", "origin"].includes(lk)) continue;
     headers[k] = req.headers[k];
   }
   // 改写关键头
   headers["Host"] = TARGET_HOST;
   headers["Referer"] = "https://www.bilibili.com/";
-  headers["Origin"] = "https://www.bilibili.com";
   if (!headers["user-agent"]) {
     headers["User-Agent"] =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
