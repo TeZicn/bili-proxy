@@ -3,5 +3,11 @@
     "api/bili.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/bili/(.*)",
+      "destination": "/api/bili"
+    }
+  ]
 }
