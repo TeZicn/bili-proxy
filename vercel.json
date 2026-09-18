@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/bili.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "regions": ["hkg1"]
     }
   },
   "rewrites": [
