@@ -2,7 +2,7 @@
   "functions": {
     "api/bili.js": {
       "maxDuration": 30,
-      "regions": ["hkg1"]
+      "regions": ["sin1"]
     }
   },
   "rewrites": [
