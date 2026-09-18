@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/bili.js": {
+      "maxDuration": 30
+    }
+  }
+}
